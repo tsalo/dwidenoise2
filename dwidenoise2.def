@@ -1,0 +1,85 @@
+Bootstrap: docker
+From: debian:bookworm-slim
+
+%labels
+    Author Robert E. Smith, Daan Christiaens, Jelle Veraart, J-Donald Tournier
+    Description dwidenoise2 and dwi2noise built against a pinned MRtrix3 commit
+
+%files
+    cpp/cmd/dwidenoise2.cpp /tmp/dwidenoise2/cpp/cmd/dwidenoise2.cpp
+    cpp/cmd/dwi2noise.cpp /tmp/dwidenoise2/cpp/cmd/dwi2noise.cpp
+    cpp/core/denoise /tmp/dwidenoise2/cpp/core/denoise
+
+%post
+    set -eux
+
+    export DEBIAN_FRONTEND=noninteractive
+    MRTRIX3_GIT_COMMITISH="fa6ee952913fbc1df79aeca745600852155f533f"
+    MAKE_JOBS="${MAKE_JOBS:-1}"
+
+    apt-get -qq update
+    apt-get install -yq --no-install-recommends \
+        ca-certificates \
+        cmake \
+        g++ \
+        gcc \
+        git \
+        less \
+        libfftw3-dev \
+        libfftw3-double3 \
+        libfftw3-single3 \
+        libpng-dev \
+        libpng16-16 \
+        make \
+        ninja-build \
+        pkg-config \
+        python3 \
+        zlib1g \
+        zlib1g-dev
+    rm -rf /var/lib/apt/lists/*
+
+    mkdir -p /src
+    git clone https://github.com/MRtrix3/mrtrix3.git /src/mrtrix3
+    cd /src/mrtrix3
+    git checkout "${MRTRIX3_GIT_COMMITISH}"
+
+    cp /tmp/dwidenoise2/cpp/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
+    cp /tmp/dwidenoise2/cpp/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
+    cp -a /tmp/dwidenoise2/cpp/core/denoise /src/mrtrix3/cpp/core/denoise
+
+    cmake -Bbuild -GNinja -DMRTRIX_BUILD_GUI=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=ON --preset=release
+    cmake --build build --target dwidenoise2 dwi2noise mrcalc mrcat mrconvert mrinfo --parallel "${MAKE_JOBS}"
+
+    mkdir -p /opt/mrtrix3
+    cp -a /src/mrtrix3/build/. /opt/mrtrix3/
+
+    rm -rf /tmp/dwidenoise2
+
+%environment
+    export PATH="/opt/mrtrix3/bin:${PATH}"
+    export LD_LIBRARY_PATH="/opt/mrtrix3/cpp/core:${LD_LIBRARY_PATH:-}"
+
+%runscript
+    exec dwidenoise2 "$@"
+
+%help
+    This image provides dwidenoise2, dwi2noise, mrcalc, mrcat, mrconvert, and mrinfo.
+
+    Build from the dwidenoise2 source directory so the relative paths in %files resolve:
+
+        cd dwidenoise2
+        apptainer build dwidenoise2.sif dwidenoise2.def
+
+    To limit build parallelism:
+
+        cd dwidenoise2
+        MAKE_JOBS=4 apptainer build dwidenoise2.sif dwidenoise2.def
+
+    Run the default command:
+
+        apptainer run dwidenoise2.sif input.mif output.mif
+
+    Or execute a specific bundled command:
+
+        apptainer exec dwidenoise2.sif dwi2noise input.mif noise.mif
+        apptainer exec dwidenoise2.sif mrcalc mag.nii.gz phase.nii.gz pi 4096 -div -mult -polar complex.mif
