@@ -16,9 +16,9 @@ From: debian:bookworm-slim
         echo "Run apptainer build from the dwidenoise2 source directory; could not find cpp/cmd/dwidenoise2.cpp" >&2
         exit 1
     fi
-    mkdir -p "${rootfs}/tmp"
-    rm -rf "${rootfs}/tmp/dwidenoise2"
-    cp -a cpp "${rootfs}/tmp/dwidenoise2"
+    mkdir -p "${rootfs}/opt"
+    rm -rf "${rootfs}/opt/dwidenoise2-src"
+    cp -a cpp "${rootfs}/opt/dwidenoise2-src"
 
 %post
     set -eux
@@ -27,9 +27,9 @@ From: debian:bookworm-slim
     MRTRIX3_GIT_COMMITISH="fa6ee952913fbc1df79aeca745600852155f533f"
     MAKE_JOBS="${MAKE_JOBS:-1}"
 
-    if [ ! -f /tmp/dwidenoise2/cmd/dwidenoise2.cpp ]; then
-        echo "dwidenoise2 sources were not staged into /tmp/dwidenoise2 before %post. Staged /tmp contents:" >&2
-        find /tmp -maxdepth 4 -print >&2 || true
+    if [ ! -f /opt/dwidenoise2-src/cmd/dwidenoise2.cpp ]; then
+        echo "dwidenoise2 sources were not staged into /opt/dwidenoise2-src before %post. Staged /opt contents:" >&2
+        find /opt -maxdepth 4 -print >&2 || true
         exit 1
     fi
 
@@ -59,9 +59,9 @@ From: debian:bookworm-slim
     cd /src/mrtrix3
     git checkout "${MRTRIX3_GIT_COMMITISH}"
 
-    cp /tmp/dwidenoise2/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
-    cp /tmp/dwidenoise2/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
-    cp -a /tmp/dwidenoise2/core/denoise /src/mrtrix3/cpp/core/denoise
+    cp /opt/dwidenoise2-src/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
+    cp /opt/dwidenoise2-src/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
+    cp -a /opt/dwidenoise2-src/core/denoise /src/mrtrix3/cpp/core/denoise
 
     cmake -Bbuild -GNinja -DMRTRIX_BUILD_GUI=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=ON --preset=release
     cmake --build build --target dwidenoise2 dwi2noise mrcalc mrcat mrconvert mrinfo --parallel "${MAKE_JOBS}"
@@ -69,7 +69,7 @@ From: debian:bookworm-slim
     mkdir -p /opt/mrtrix3
     cp -a /src/mrtrix3/build/. /opt/mrtrix3/
 
-    rm -rf /tmp/dwidenoise2
+    rm -rf /opt/dwidenoise2-src
 
 %environment
     export PATH="/opt/mrtrix3/bin:${PATH}"
