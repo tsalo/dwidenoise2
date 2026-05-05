@@ -7,9 +7,18 @@ From: debian:bookworm-slim
 
 %setup
     set -eu
-    mkdir -p "${APPTAINER_ROOTFS}/tmp"
-    rm -rf "${APPTAINER_ROOTFS}/tmp/dwidenoise2"
-    cp -a cpp "${APPTAINER_ROOTFS}/tmp/dwidenoise2"
+    rootfs="${APPTAINER_ROOTFS:-${SINGULARITY_ROOTFS:-}}"
+    if [ -z "${rootfs}" ]; then
+        echo "Neither APPTAINER_ROOTFS nor SINGULARITY_ROOTFS is set" >&2
+        exit 1
+    fi
+    if [ ! -f cpp/cmd/dwidenoise2.cpp ]; then
+        echo "Run apptainer build from the dwidenoise2 source directory; could not find cpp/cmd/dwidenoise2.cpp" >&2
+        exit 1
+    fi
+    mkdir -p "${rootfs}/tmp"
+    rm -rf "${rootfs}/tmp/dwidenoise2"
+    cp -a cpp "${rootfs}/tmp/dwidenoise2"
 
 %post
     set -eux
@@ -17,6 +26,12 @@ From: debian:bookworm-slim
     export DEBIAN_FRONTEND=noninteractive
     MRTRIX3_GIT_COMMITISH="fa6ee952913fbc1df79aeca745600852155f533f"
     MAKE_JOBS="${MAKE_JOBS:-1}"
+
+    if [ ! -f /tmp/dwidenoise2/cmd/dwidenoise2.cpp ]; then
+        echo "dwidenoise2 sources were not staged into /tmp/dwidenoise2 before %post. Staged /tmp contents:" >&2
+        find /tmp -maxdepth 4 -print >&2 || true
+        exit 1
+    fi
 
     apt-get -qq update
     apt-get install -yq --no-install-recommends \
@@ -44,19 +59,9 @@ From: debian:bookworm-slim
     cd /src/mrtrix3
     git checkout "${MRTRIX3_GIT_COMMITISH}"
 
-    if [ -f /tmp/dwidenoise2/cmd/dwidenoise2.cpp ]; then
-        DWIDENOISE2_CPP=/tmp/dwidenoise2
-    elif [ -f /tmp/dwidenoise2/cpp/cmd/dwidenoise2.cpp ]; then
-        DWIDENOISE2_CPP=/tmp/dwidenoise2/cpp
-    else
-        echo "Could not find staged dwidenoise2 sources. Staged files:" >&2
-        find /tmp/dwidenoise2 -maxdepth 5 -print >&2 || true
-        exit 1
-    fi
-
-    cp "${DWIDENOISE2_CPP}/cmd/dwidenoise2.cpp" /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
-    cp "${DWIDENOISE2_CPP}/cmd/dwi2noise.cpp" /src/mrtrix3/cpp/cmd/dwi2noise.cpp
-    cp -a "${DWIDENOISE2_CPP}/core/denoise" /src/mrtrix3/cpp/core/denoise
+    cp /tmp/dwidenoise2/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
+    cp /tmp/dwidenoise2/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
+    cp -a /tmp/dwidenoise2/core/denoise /src/mrtrix3/cpp/core/denoise
 
     cmake -Bbuild -GNinja -DMRTRIX_BUILD_GUI=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=ON --preset=release
     cmake --build build --target dwidenoise2 dwi2noise mrcalc mrcat mrconvert mrinfo --parallel "${MAKE_JOBS}"
