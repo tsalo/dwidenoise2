@@ -5,8 +5,11 @@ From: debian:bookworm-slim
     Author Robert E. Smith, Daan Christiaens, Jelle Veraart, J-Donald Tournier
     Description dwidenoise2 and dwi2noise built against a pinned MRtrix3 commit
 
-%files
-    cpp /tmp/dwidenoise2
+%setup
+    set -eu
+    mkdir -p "${APPTAINER_ROOTFS}/tmp"
+    rm -rf "${APPTAINER_ROOTFS}/tmp/dwidenoise2"
+    cp -a cpp "${APPTAINER_ROOTFS}/tmp/dwidenoise2"
 
 %post
     set -eux
