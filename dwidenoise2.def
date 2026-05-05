@@ -6,9 +6,7 @@ From: debian:bookworm-slim
     Description dwidenoise2 and dwi2noise built against a pinned MRtrix3 commit
 
 %files
-    cpp/cmd/dwidenoise2.cpp /tmp/dwidenoise2/cpp/cmd/dwidenoise2.cpp
-    cpp/cmd/dwi2noise.cpp /tmp/dwidenoise2/cpp/cmd/dwi2noise.cpp
-    cpp/core/denoise /tmp/dwidenoise2/cpp/core/denoise
+    cpp /tmp/dwidenoise2
 
 %post
     set -eux
@@ -43,9 +41,9 @@ From: debian:bookworm-slim
     cd /src/mrtrix3
     git checkout "${MRTRIX3_GIT_COMMITISH}"
 
-    cp /tmp/dwidenoise2/cpp/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
-    cp /tmp/dwidenoise2/cpp/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
-    cp -a /tmp/dwidenoise2/cpp/core/denoise /src/mrtrix3/cpp/core/denoise
+    cp /tmp/dwidenoise2/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
+    cp /tmp/dwidenoise2/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
+    cp -a /tmp/dwidenoise2/core/denoise /src/mrtrix3/cpp/core/denoise
 
     cmake -Bbuild -GNinja -DMRTRIX_BUILD_GUI=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=ON --preset=release
     cmake --build build --target dwidenoise2 dwi2noise mrcalc mrcat mrconvert mrinfo --parallel "${MAKE_JOBS}"
