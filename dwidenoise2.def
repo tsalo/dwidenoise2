@@ -41,9 +41,19 @@ From: debian:bookworm-slim
     cd /src/mrtrix3
     git checkout "${MRTRIX3_GIT_COMMITISH}"
 
-    cp /tmp/dwidenoise2/cmd/dwidenoise2.cpp /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
-    cp /tmp/dwidenoise2/cmd/dwi2noise.cpp /src/mrtrix3/cpp/cmd/dwi2noise.cpp
-    cp -a /tmp/dwidenoise2/core/denoise /src/mrtrix3/cpp/core/denoise
+    if [ -f /tmp/dwidenoise2/cmd/dwidenoise2.cpp ]; then
+        DWIDENOISE2_CPP=/tmp/dwidenoise2
+    elif [ -f /tmp/dwidenoise2/cpp/cmd/dwidenoise2.cpp ]; then
+        DWIDENOISE2_CPP=/tmp/dwidenoise2/cpp
+    else
+        echo "Could not find staged dwidenoise2 sources. Staged files:" >&2
+        find /tmp/dwidenoise2 -maxdepth 5 -print >&2 || true
+        exit 1
+    fi
+
+    cp "${DWIDENOISE2_CPP}/cmd/dwidenoise2.cpp" /src/mrtrix3/cpp/cmd/dwidenoise2.cpp
+    cp "${DWIDENOISE2_CPP}/cmd/dwi2noise.cpp" /src/mrtrix3/cpp/cmd/dwi2noise.cpp
+    cp -a "${DWIDENOISE2_CPP}/core/denoise" /src/mrtrix3/cpp/core/denoise
 
     cmake -Bbuild -GNinja -DMRTRIX_BUILD_GUI=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=ON --preset=release
     cmake --build build --target dwidenoise2 dwi2noise mrcalc mrcat mrconvert mrinfo --parallel "${MAKE_JOBS}"
