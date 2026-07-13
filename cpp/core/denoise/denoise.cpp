@@ -25,6 +25,15 @@ namespace MR::Denoise {
 
 using namespace App;
 
+const char *patent_description =
+    "Estimation of the noise level of an image series"
+    " based on the Marchenk--Pastur distribution (-estimator exp1/exp2)"
+    " is protected by the following patent: \n"
+    "US10698065B2."
+    " System, method and computer accessible medium for noise estimation, noise removal and gibbs ringing removal."
+    " Dmitry Novikov, Jelle Veraart, Els Fieremans."
+    " Contact: https://tov.med.nyu.edu/about/contact-us/";
+
 const char *first_step_description =
     "Important note:"
     " image denoising must be performed as the first step of the image processing pipeline."
@@ -56,7 +65,11 @@ const char *filter_description =
     "---which was the behaviour of the dwidenoise command in version 3.0.x---"
     "can be activated using -filter truncate."
     "Alternatively, optimal truncation as described in Gavish and Donoho 2014 "
-    "can be utilised by specifying -filter optthresh.";
+    "can be utilised by specifying -filter optthresh. "
+    "For denoising of functional MRI data, "
+    "it is hypothesized (though not exhaustively tested) "
+    "that use of -filter truncate may be a superior choice to the default optimal shrinkage "
+    "as it minimises risk of loss of BOLD signal fluctuations near the noise floor.";
 
 const char *aggregation_description =
     "-aggregation exclusive corresponds to the behaviour of the dwidenoise command in version 3.0.x, "
