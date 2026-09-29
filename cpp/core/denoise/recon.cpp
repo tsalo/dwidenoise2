@@ -72,6 +72,9 @@ template <typename F> void Recon<F>::operator()(Image<F> &dwi, Image<F> &out) {
 
   Estimate<F>::operator()(dwi);
 
+  if (Estimate<F>::patch.voxels.empty())
+    return;
+
   if (Estimate<F>::partitioned()) {
     recon_partitioned(dwi, out);
     return;

@@ -184,7 +184,9 @@ template <typename F> void Estimate<F>::operator()(Image<F> &dwi) {
 
   // Compute the eigendecomposition(s) and estimate the signal/noise threshold.
   bool successful_decomposition = false;
-  if (partitioned()) {
+  if (n == 0) {
+    threshold = Estimator::Result();
+  } else if (partitioned()) {
     // Split the volumes into partitions, decompose each independently, and estimate a single
     //   noise level (with a per-partition rank) from the pooled spectrum.
     successful_decomposition = compute_partitions(n);
