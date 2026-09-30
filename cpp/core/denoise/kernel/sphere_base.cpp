@@ -100,7 +100,9 @@ default_type SphereBase::compute_max_radius(const Header &voxel_grid, const ssiz
   //   when processing a voxel in the corner of the FoV,
   //   only one of the eight octants will have valid image data
   const default_type sphere_volume = 8.0 * min_size * voxel_volume;
-  const default_type approx_radius = std::cbrt(sphere_volume * 0.75 / Math::pi);
+  // NOTE: cbrt is mathematically correct here, but sqrt's larger table keeps empty patches away from
+  //   valid data.
+  const default_type approx_radius = std::sqrt(sphere_volume * 0.75 / Math::pi);
   const Voxel::index_type half_extents({ssize_t(std::ceil(approx_radius / voxel_grid.spacing(0))),   //
                                         ssize_t(std::ceil(approx_radius / voxel_grid.spacing(1))),   //
                                         ssize_t(std::ceil(approx_radius / voxel_grid.spacing(2)))}); //
