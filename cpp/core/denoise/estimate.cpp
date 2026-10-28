@@ -27,6 +27,18 @@
 
 namespace MR::Denoise {
 
+namespace {
+// Eigen's BDCSVD can report success yet return non-finite values,
+//   for instance for a patch whose voxels hold identical series;
+//   such decompositions are treated as having failed.
+template <class SVDType> bool svd_is_finite(const SVDType &svd, const bool vectors) {
+  return svd.singularValues().allFinite() && (!vectors || (svd.matrixU().allFinite() && svd.matrixV().allFinite()));
+}
+template <class EigType> bool eig_is_finite(const EigType &eig, const bool vectors) {
+  return eig.eigenvalues().allFinite() && (!vectors || eig.eigenvectors().allFinite());
+}
+} // namespace
+
 template <typename F>
 Estimate<F>::Estimate(const Image<F> &image,
                       std::shared_ptr<SpatialSubsample> subsample,
@@ -198,7 +210,7 @@ template <typename F> void Estimate<F>::operator()(Image<F> &dwi) {
     switch (decomp) {
     case decomp_type::BDCSVD: {
       SVD.compute(X.leftCols(n), enable_recon ? (Eigen::ComputeThinU | Eigen::ComputeThinV) : Eigen::EigenvaluesOnly);
-      successful_decomposition = SVD.info() == Eigen::Success;
+      successful_decomposition = SVD.info() == Eigen::Success && svd_is_finite(SVD, enable_recon);
       if (successful_decomposition) {
         // eigenvalues sorted in increasing order:
         s.head(r) = SVD.singularValues().array().reverse().square().template cast<double>();
@@ -210,7 +222,7 @@ template <typename F> void Estimate<F>::operator()(Image<F> &dwi) {
       else
         XtX.topLeftCorner(r, r).template triangularView<Eigen::Lower>() = X.leftCols(n).adjoint() * X.leftCols(n);
       eig.compute(XtX.topLeftCorner(r, r), enable_recon ? Eigen::ComputeEigenvectors : Eigen::EigenvaluesOnly);
-      successful_decomposition = eig.info() == Eigen::Success;
+      successful_decomposition = eig.info() == Eigen::Success && eig_is_finite(eig, enable_recon);
       if (successful_decomposition) {
         // eigenvalues sorted in increasing order,
         //   additionally clamping any negtive values to zero:
@@ -369,7 +381,7 @@ template <typename F> bool Estimate<F>::compute_partitions(const ssize_t n) {
     switch (decomp) {
     case decomp_type::BDCSVD: {
       SVD.compute(Xp, enable_recon ? (Eigen::ComputeThinU | Eigen::ComputeThinV) : Eigen::EigenvaluesOnly);
-      ok = SVD.info() == Eigen::Success;
+      ok = SVD.info() == Eigen::Success && svd_is_finite(SVD, enable_recon);
       if (ok) {
         s_partition[p].head(r_p) = SVD.singularValues().array().reverse().square().template cast<double>();
         if (enable_recon) {
@@ -387,7 +399,7 @@ template <typename F> bool Estimate<F>::compute_partitions(const ssize_t n) {
       else
         XtX.topLeftCorner(r_p, r_p).template triangularView<Eigen::Lower>() = Xp.adjoint() * Xp;
       eig.compute(XtX.topLeftCorner(r_p, r_p), enable_recon ? Eigen::ComputeEigenvectors : Eigen::EigenvaluesOnly);
-      ok = eig.info() == Eigen::Success;
+      ok = eig.info() == Eigen::Success && eig_is_finite(eig, enable_recon);
       if (ok) {
         s_partition[p].head(r_p) = eig.eigenvalues().template cast<double>().cwiseMax(0.0);
         if (enable_recon)
